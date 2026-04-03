@@ -49,6 +49,8 @@ If you are using Python 3.13 on Windows, keep the pinned ML dependencies from `m
 
 If your frontend runs on a different local port, set `CLIENT_URL` or `CLIENT_URLS` in `.env` to include that origin. The backend now accepts any local `localhost` or `127.0.0.1` origin during development, including Vite ports like `5174`.
 
+If `/api/auth/login` starts returning `429`, it usually means the auth limiter has been hit by repeated login attempts or refresh traffic. Restarting the server resets the in-memory limiter, and development mode now allows a much higher threshold.
+
 ### 4. Start Backend Server
 ```bash
 cd server

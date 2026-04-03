@@ -88,7 +88,10 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, // Stricter for auth endpoints
+  max: process.env.NODE_ENV === 'production' ? 20 : 1000,
+  skip: (req) => req.method === 'OPTIONS',
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { error: 'Too many login attempts', code: 'AUTH_RATE_LIMIT' },
 });
 
