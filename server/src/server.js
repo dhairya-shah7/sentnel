@@ -29,7 +29,7 @@ mongoose
     });
 
     server.listen(PORT, () => {
-      console.log(`[Server] SentinelOps API running on http://localhost:${PORT}`);
+      console.log(`[Server] Regiment API running on http://localhost:${PORT}`);
       console.log(`[Server] Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   })

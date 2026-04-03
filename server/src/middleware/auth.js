@@ -7,17 +7,9 @@ const User = require('../models/User');
  */
 const verifyToken = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const user = await verifyRequestUser(req);
+    if (!user) {
       return res.status(401).json({ error: 'No token provided', code: 'NO_TOKEN' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.id).select('-passwordHash -refreshToken');
-    if (!user || !user.isActive) {
-      return res.status(401).json({ error: 'User not found or inactive', code: 'INVALID_TOKEN' });
     }
 
     req.user = user;
@@ -55,15 +47,9 @@ const requireRole = (...roles) => {
  */
 const verifyRefreshToken = async (req, res, next) => {
   try {
-    const token = req.cookies?.refreshToken;
-    if (!token) {
+    const user = await verifyRequestUser(req, { refreshOnly: true });
+    if (!user) {
       return res.status(401).json({ error: 'Refresh token missing', code: 'NO_REFRESH_TOKEN' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findById(decoded.id).select('+refreshToken');
-    if (!user || user.refreshToken !== token) {
-      return res.status(401).json({ error: 'Invalid refresh token', code: 'INVALID_REFRESH_TOKEN' });
     }
 
     req.user = user;
@@ -72,5 +58,29 @@ const verifyRefreshToken = async (req, res, next) => {
     return res.status(401).json({ error: 'Refresh token expired or invalid', code: 'REFRESH_TOKEN_INVALID' });
   }
 };
+
+async function verifyRequestUser(req, { refreshOnly = false } = {}) {
+  const authHeader = req.headers.authorization;
+
+  if (!refreshOnly && authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('-passwordHash -refreshToken');
+      if (user && user.isActive) return user;
+    } catch {
+      // fall through to refresh token
+    }
+  }
+
+  const refreshToken = req.cookies?.refreshToken;
+  if (!refreshToken) return null;
+
+  const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  const user = await User.findById(decoded.id).select('+refreshToken');
+  if (!user || !user.isActive || user.refreshToken !== refreshToken) return null;
+
+  return user;
+}
 
 module.exports = { verifyToken, requireRole, verifyRefreshToken };

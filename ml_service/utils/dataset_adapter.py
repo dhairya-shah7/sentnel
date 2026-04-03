@@ -14,30 +14,35 @@ class DatasetAdapter:
     SUPPORTED = ["UNSW-NB15", "NSL-KDD", "CICIDS"]
 
     def __init__(self, source: str):
-        source = source.upper().strip()
-        if source not in [s.upper() for s in self.SUPPORTED]:
-            # fuzzy match
-            if "UNSW" in source:
-                source = "UNSW-NB15"
-            elif "NSL" in source or "KDD" in source:
-                source = "NSL-KDD"
-            elif "CIC" in source or "IDS" in source:
-                source = "CICIDS"
-            else:
-                raise ValueError(f"Unsupported dataset source: {source}. Choose from {self.SUPPORTED}")
-        self.source = source
+        source = str(source or "").upper().strip()
+        if source in [s.upper() for s in self.SUPPORTED]:
+            self.source = source
+            return
+
+        # fuzzy match common dataset families
+        if "UNSW" in source:
+            self.source = "UNSW-NB15"
+        elif "NSL" in source or "KDD" in source:
+            self.source = "NSL-KDD"
+        elif "CIC" in source or "IDS" in source:
+            self.source = "CICIDS"
+        else:
+            # Generic/custom CSVs are supported through best-effort inference.
+            self.source = "CUSTOM"
 
     def adapt(self, df: pd.DataFrame) -> pd.DataFrame:
         """Convert raw dataset columns to canonical schema."""
         # Strip whitespace from all column names (CICIDS bug)
-        df.columns = [c.strip() for c in df.columns]
+        df = df.copy()
+        df.columns = [str(c).strip() for c in df.columns]
 
         if "UNSW" in self.source.upper():
             return self._adapt_unsw_nb15(df)
         elif "NSL" in self.source.upper() or "KDD" in self.source.upper():
             return self._adapt_nsl_kdd(df)
-        else:
+        elif "CIC" in self.source.upper():
             return self._adapt_cicids(df)
+        return self._adapt_generic(df)
 
     def _adapt_unsw_nb15(self, df: pd.DataFrame) -> pd.DataFrame:
         """UNSW-NB15: 49 features."""
@@ -123,6 +128,60 @@ class DatasetAdapter:
         df["label"] = df["label"].apply(
             lambda x: "normal" if str(x).strip().upper() in ["BENIGN", "NORMAL", "0"] else "anomaly"
         )
+        return df
+
+    def _adapt_generic(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Best-effort adapter for custom CSV files."""
+        mapping = {}
+        for col in df.columns:
+            key = col.lower().strip()
+            if key in {"src_ip", "srcip", "source_ip", "sourceip", "src", "source"}:
+                mapping[col] = "src_ip"
+            elif key in {"dst_ip", "dstip", "destination_ip", "destinationip", "dst", "destination"}:
+                mapping[col] = "dst_ip"
+            elif key in {"protocol", "proto"}:
+                mapping[col] = "protocol"
+            elif key in {"packet_size", "packet", "size", "src_bytes", "sbytes"}:
+                mapping[col] = "packet_size"
+            elif key in {"duration", "dur", "flow_duration"}:
+                mapping[col] = "duration"
+            elif key in {"tcp_flags", "flags", "flag"}:
+                mapping[col] = "tcp_flags"
+            elif key in {"byte_rate", "flow_bytes_s", "bytes_s", "sload", "rate"}:
+                mapping[col] = "byte_rate"
+            elif key in {"connection_state", "state", "conn_state"}:
+                mapping[col] = "connection_state"
+            elif key in {"label", "class", "target", "anomaly"}:
+                mapping[col] = "label"
+
+        df = df.rename(columns=mapping)
+        df = self._remap(df, {})
+
+        # Add best-effort defaults if the file doesn't contain network context.
+        if "src_ip" not in df.columns:
+            df["src_ip"] = "0.0.0.0"
+        if "dst_ip" not in df.columns:
+            df["dst_ip"] = "0.0.0.0"
+
+        df["protocol"] = df["protocol"].fillna("unknown")
+        df["connection_state"] = df["connection_state"].fillna("unknown")
+
+        if "label" in df.columns:
+            df["label"] = df["label"].apply(
+                lambda x: "normal" if str(x).strip().lower() in {"0", "normal", "benign", ""} else "anomaly"
+            )
+        else:
+            df["label"] = "unknown"
+
+        if "packet_size" not in df.columns:
+            df["packet_size"] = 0
+        if "duration" not in df.columns:
+            df["duration"] = 0
+        if "tcp_flags" not in df.columns:
+            df["tcp_flags"] = ""
+        if "byte_rate" not in df.columns:
+            df["byte_rate"] = 0
+
         return df
 
     def _remap(self, df: pd.DataFrame, mapping: dict) -> pd.DataFrame:

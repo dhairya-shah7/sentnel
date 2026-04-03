@@ -14,6 +14,8 @@ router.post(
   ctrl.upload
 );
 
+router.post('/sync-local', ctrl.syncLocal);
+
 router.get('/',     verifyToken, ctrl.list);
 router.get('/:id',  verifyToken, ctrl.getById);
 router.delete('/:id', verifyToken, requireRole('admin', 'analyst'), audit('dataset.delete'), ctrl.deleteById);

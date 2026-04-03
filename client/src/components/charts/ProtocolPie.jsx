@@ -1,11 +1,11 @@
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#00D4FF', '#F59E0B', '#10B981', '#FF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+const COLORS = ['#7A3D2C', '#485935', '#A26A2D', '#9A4F3D', '#8F7B49', '#5F2E23', '#A8844D', '#B99F6F'];
 
 const CustomTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#0A0F1A] border border-border p-3 text-xs font-mono">
+    <div className="bg-surface border border-border p-3 text-xs font-mono text-text-primary">
       <p style={{ color: payload[0].payload.fill }}>{payload[0].name}: {payload[0].value}</p>
     </div>
   );

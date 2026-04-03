@@ -29,7 +29,7 @@ const fileFilter = (req, file, cb) => {
       false
     );
   }
-  if (file.mimetype && !['text/csv', 'application/csv', 'text/plain', 'application/octet-stream'].includes(file.mimetype)) {
+  if (file.mimetype && !['text/csv', 'application/csv', 'text/plain', 'application/octet-stream', 'application/vnd.ms-excel'].includes(file.mimetype)) {
     return cb(
       Object.assign(new Error('Invalid MIME type for CSV'), {
         statusCode: 400,
@@ -41,13 +41,14 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-const maxSizeMB = parseInt(process.env.MAX_UPLOAD_SIZE_MB || '100', 10);
+const maxUploadBytes = getUploadLimitBytes();
+const maxUploadLabel = getUploadLimitLabel();
 
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: maxSizeMB * 1024 * 1024,
+    fileSize: maxUploadBytes,
   },
 });
 
@@ -56,7 +57,7 @@ const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(413).json({
-        error: `File too large. Maximum size is ${maxSizeMB}MB`,
+        error: `File too large. Maximum size is ${maxUploadLabel}`,
         code: 'FILE_TOO_LARGE',
       });
     }
@@ -72,3 +73,31 @@ const handleUploadError = (err, req, res, next) => {
 };
 
 module.exports = { upload, handleUploadError };
+
+function getUploadLimitBytes() {
+  const gb = Number.parseFloat(process.env.MAX_UPLOAD_SIZE_GB || '');
+  if (Number.isFinite(gb) && gb > 0) {
+    return Math.floor(gb * 1024 * 1024 * 1024);
+  }
+
+  const mb = Number.parseFloat(process.env.MAX_UPLOAD_SIZE_MB || '5120');
+  if (Number.isFinite(mb) && mb > 0) {
+    return Math.floor(mb * 1024 * 1024);
+  }
+
+  return 5 * 1024 * 1024 * 1024;
+}
+
+function getUploadLimitLabel() {
+  const gb = Number.parseFloat(process.env.MAX_UPLOAD_SIZE_GB || '');
+  if (Number.isFinite(gb) && gb > 0) {
+    return `${gb}GB`;
+  }
+
+  const mb = Number.parseFloat(process.env.MAX_UPLOAD_SIZE_MB || '5120');
+  if (Number.isFinite(mb) && mb > 0) {
+    return `${mb}MB`;
+  }
+
+  return '5GB';
+}

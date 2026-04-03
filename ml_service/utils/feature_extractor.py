@@ -1,10 +1,17 @@
-"""Feature extractor — select and validate canonical features."""
-import pandas as pd
+"""Feature extractor - select and validate canonical features."""
 import numpy as np
+import pandas as pd
+
 
 CANONICAL_FEATURES = [
-    "src_ip", "dst_ip", "protocol", "packet_size",
-    "duration", "tcp_flags", "byte_rate", "connection_state", "label"
+    "src_ip",
+    "dst_ip",
+    "protocol",
+    "packet_size",
+    "duration",
+    "tcp_flags",
+    "byte_rate",
+    "connection_state",
 ]
 
 
@@ -16,8 +23,6 @@ def extract_features(df: pd.DataFrame) -> pd.DataFrame:
                 df[col] = "0.0.0.0"
             elif col in ["protocol", "connection_state"]:
                 df[col] = "unknown"
-            elif col == "label":
-                df[col] = "unknown"
             else:
                 df[col] = 0.0
     return df[CANONICAL_FEATURES]
@@ -26,7 +31,7 @@ def extract_features(df: pd.DataFrame) -> pd.DataFrame:
 def validate_schema(df: pd.DataFrame, min_rows: int = 1) -> dict:
     """Validate that a DataFrame has at least the minimum required columns."""
     present = set(df.columns)
-    required = {"label"}
+    required = set()
     numeric_required = {"packet_size", "duration", "byte_rate"}
 
     missing_required = required - present

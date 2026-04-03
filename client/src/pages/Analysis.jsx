@@ -21,6 +21,7 @@ export default function Analysis() {
   const [jobs, setJobs] = useState([]);
   const [activeJobId, setActiveJobId] = useState(null);
   const [jobProgress, setJobProgress] = useState({});
+  const [latestSummary, setLatestSummary] = useState(null);
 
   useEffect(() => {
     api.get('/dataset?limit=100').then((res) => setDatasets(res.data.datasets?.filter(d => d.status === 'ready') || []));
@@ -31,9 +32,39 @@ export default function Analysis() {
     (data) => setJobProgress(p => ({ ...p, [data.jobId]: data })),
     (data) => {
       setJobProgress(p => ({ ...p, [data.jobId]: { ...p[data.jobId], percent: 100, status: 'complete' } }));
+      setLatestSummary(data);
       toast.success(`Analysis complete: ${data.resultCount?.toLocaleString()} records, ${data.criticalCount} critical`);
     }
   );
+
+  useEffect(() => {
+    if (!activeJobId) return;
+
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await api.get(`/analysis/${activeJobId}/status`);
+        if (cancelled) return;
+        const job = res.data.job || {};
+        setJobProgress((p) => ({ ...p, [activeJobId]: { ...p[activeJobId], ...job } }));
+        if (job.status === 'complete' && job.result) {
+          setLatestSummary(job.result);
+        }
+        if (job.status === 'failed') {
+          toast.error(job.stage || job.message || 'Analysis failed');
+        }
+      } catch {
+        // ignore polling hiccups; websocket may still deliver updates
+      }
+    };
+
+    poll();
+    const timer = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeJobId]);
 
   const runAnalysis = async () => {
     if (!selectedDataset) return toast.error('Select a dataset');
@@ -131,6 +162,49 @@ export default function Analysis() {
           </div>
         </div>
 
+        {latestSummary && (
+          <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="card">
+              <p className="section-title mb-3">Executive Summary</p>
+              <p className="text-sm leading-6 text-text-secondary">
+                {latestSummary.executiveSummary || 'No executive summary available for this run.'}
+              </p>
+              <div className="mt-4 grid grid-cols-3 gap-3 text-xs font-mono">
+                <div className="border border-border p-3">
+                  <p className="text-text-muted uppercase tracking-wider">Anomalies</p>
+                  <p className="text-text-primary mt-1">{latestSummary.anomalyCount?.toLocaleString() || latestSummary.resultCount?.toLocaleString() || '0'}</p>
+                </div>
+                <div className="border border-border p-3">
+                  <p className="text-text-muted uppercase tracking-wider">Critical</p>
+                  <p className="text-text-primary mt-1">{latestSummary.criticalCount?.toLocaleString() || '0'}</p>
+                </div>
+                <div className="border border-border p-3">
+                  <p className="text-text-muted uppercase tracking-wider">Confidence</p>
+                  <p className="text-text-primary mt-1">{latestSummary.accuracyEstimate != null ? `${latestSummary.accuracyEstimate}%` : 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <p className="section-title mb-3">Technical Summary</p>
+              <p className="text-sm leading-6 text-text-secondary">
+                {latestSummary.technicalSummary?.summary || latestSummary.technicalSummary?.notes || 'No technical summary available for this run.'}
+              </p>
+              <div className="mt-4 space-y-2">
+                {(latestSummary.technicalSummary?.topSignals || []).length ? (
+                  latestSummary.technicalSummary.topSignals.map((signal) => (
+                    <div key={signal.signal} className="flex items-center justify-between text-xs font-mono border-b border-border pb-2">
+                      <span className="text-text-muted uppercase tracking-wider">{signal.signal}</span>
+                      <span className="text-text-primary">{signal.count}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs font-mono text-text-muted">No repeated technical signals captured.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Job queue */}
         <div className="lg:col-span-2 card">
           <p className="section-title mb-4">Job Queue ({jobs.length})</p>
@@ -148,7 +222,7 @@ export default function Analysis() {
                   <div key={job.jobId} className={`p-4 border ${status === 'failed' ? 'border-alert/30' : 'border-border'} bg-surface-2`}>
                     <div className="flex items-start gap-4">
                       <ProgressRing percent={pct} size={56} strokeWidth={4}
-                        color={status === 'complete' ? '#10B981' : status === 'failed' ? '#FF4444' : '#00D4FF'} />
+                        color={status === 'complete' ? '#485935' : status === 'failed' ? '#9A4F3D' : '#7A3D2C'} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs font-mono uppercase font-bold ${JOB_STATUS_STYLE[status] || 'text-text-muted'}`}>
@@ -163,7 +237,7 @@ export default function Analysis() {
                         <div className="mt-2 h-1 bg-surface-3 w-full">
                           <div
                             className="h-1 bg-accent transition-all duration-500"
-                            style={{ width: `${pct}%`, background: status === 'failed' ? '#FF4444' : status === 'complete' ? '#10B981' : '#00D4FF' }}
+                            style={{ width: `${pct}%`, background: status === 'failed' ? '#9A4F3D' : status === 'complete' ? '#485935' : '#7A3D2C' }}
                           />
                         </div>
                       </div>

@@ -4,6 +4,8 @@ const User = require('../models/User');
 const { createError } = require('../middleware/errorHandler');
 
 const SALT_ROUNDS = 12;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME_MS = 15 * 60 * 1000;
 
 const generateTokens = (user) => {
   const payload = { id: user._id, role: user.role, email: user.email };
@@ -31,7 +33,9 @@ const setRefreshCookie = (res, token) => {
 // POST /api/auth/register
 exports.register = async (req, res, next) => {
   try {
-    const { username, email, password } = req.body;
+    const username = typeof req.body.username === 'string' ? req.body.username.trim() : req.body.username;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : req.body.email;
+    const password = req.body.password;
 
     if (!username || !email || !password) {
       throw createError(400, 'username, email and password are required', 'MISSING_FIELDS');
@@ -65,7 +69,8 @@ exports.register = async (req, res, next) => {
 // POST /api/auth/login
 exports.login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : req.body.email;
+    const password = req.body.password;
     if (!email || !password) {
       throw createError(400, 'Email and password required', 'MISSING_FIELDS');
     }
@@ -75,13 +80,29 @@ exports.login = async (req, res, next) => {
       throw createError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
+    if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
+      const retryAfterMs = user.lockUntil.getTime() - Date.now();
+      throw createError(423, `Account temporarily locked. Try again in ${Math.ceil(retryAfterMs / 60000)} minute(s).`, 'ACCOUNT_LOCKED');
+    }
+
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
+      const loginAttempts = (user.loginAttempts || 0) + 1;
+      const shouldLock = loginAttempts >= MAX_LOGIN_ATTEMPTS;
+      await User.findByIdAndUpdate(user._id, {
+        loginAttempts,
+        ...(shouldLock ? { lockUntil: new Date(Date.now() + LOCK_TIME_MS) } : {}),
+      });
       throw createError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
     const { accessToken, refreshToken } = generateTokens(user);
-    await User.findByIdAndUpdate(user._id, { refreshToken, lastLogin: new Date() });
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken,
+      lastLogin: new Date(),
+      loginAttempts: 0,
+      lockUntil: null,
+    });
     setRefreshCookie(res, refreshToken);
 
     res.json({
@@ -112,7 +133,11 @@ exports.refresh = async (req, res, next) => {
   try {
     const user = req.user; // injected by verifyRefreshToken middleware
     const { accessToken, refreshToken } = generateTokens(user);
-    await User.findByIdAndUpdate(user._id, { refreshToken });
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken,
+      loginAttempts: 0,
+      lockUntil: null,
+    });
     setRefreshCookie(res, refreshToken);
     res.json({ accessToken });
   } catch (err) {

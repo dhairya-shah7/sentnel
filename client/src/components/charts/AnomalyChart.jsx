@@ -2,9 +2,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload || {};
   return (
-    <div className="bg-[#0A0F1A] border border-border p-3 text-xs font-mono">
-      <p className="text-text-muted mb-1">{label}</p>
+    <div className="bg-surface border border-border p-3 text-xs font-mono shadow-2xl text-text-primary">
+      <p className="text-text-muted mb-1">{point.timestamp ? new Date(point.timestamp).toLocaleString('en-US', { hour12: false }) : label}</p>
       {payload.map((p) => (
         <p key={p.dataKey} style={{ color: p.color }}>{p.name}: {p.value}</p>
       ))}
@@ -12,7 +13,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function AnomalyChart({ data = [] }) {
+export default function AnomalyChart({ data = [], mode = 'all' }) {
   if (!data.length) {
     return (
       <div className="flex items-center justify-center h-48 border border-dashed border-border">
@@ -27,18 +28,22 @@ export default function AnomalyChart({ data = [] }) {
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
         <XAxis
           dataKey="label"
-          tick={{ fill: '#4B5563', fontSize: 10, fontFamily: 'JetBrains Mono' }}
-          axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+          tick={{ fill: '#7A3D2C', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+          axisLine={{ stroke: 'rgba(122,61,44,0.14)' }}
           tickLine={false}
         />
         <YAxis
-          tick={{ fill: '#4B5563', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+          tick={{ fill: '#7A3D2C', fontSize: 10, fontFamily: 'JetBrains Mono' }}
           axisLine={false}
           tickLine={false}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Bar dataKey="anomalies" fill="#00D4FF" name="Anomalies" radius={[1,1,0,0]} maxBarSize={20} opacity={0.8} />
-        <Bar dataKey="critical" fill="#FF4444" name="Critical" radius={[1,1,0,0]} maxBarSize={20} />
+        {mode !== 'critical' && (
+          <Bar dataKey="anomalies" fill="#7A3D2C" name="Anomalies" radius={[1, 1, 0, 0]} maxBarSize={20} opacity={0.85} />
+        )}
+        {mode !== 'anomalies' && (
+          <Bar dataKey="critical" fill="#485935" name="Critical" radius={[1, 1, 0, 0]} maxBarSize={20} />
+        )}
       </BarChart>
     </ResponsiveContainer>
   );

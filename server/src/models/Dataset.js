@@ -9,8 +9,9 @@ const datasetSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['UNSW-NB15', 'NSL-KDD', 'CICIDS'],
       required: true,
+      trim: true,
+      default: 'Custom',
     },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,

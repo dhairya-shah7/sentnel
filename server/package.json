@@ -1,7 +1,7 @@
 {
   "name": "sentinelops-server",
   "version": "1.0.0",
-  "description": "SentinelOps backend API server",
+  "description": "Regiment backend API server",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {

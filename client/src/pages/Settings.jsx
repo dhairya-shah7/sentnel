@@ -8,6 +8,7 @@ export default function Settings() {
   const { user, hasRole } = useAuth();
   const [users, setUsers] = useState([]);
   const [updating, setUpdating] = useState(null);
+  const [deployment, setDeployment] = useState(null);
 
   const fetchUsers = useCallback(async () => {
     if (!hasRole('admin')) return;
@@ -20,6 +21,12 @@ export default function Settings() {
   }, [hasRole]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  useEffect(() => {
+    api.get('/system/deployment').then((res) => setDeployment(res.data)).catch((error) => {
+      void error;
+    });
+  }, []);
 
   const updateUser = async (id, data) => {
     setUpdating(id);
@@ -91,6 +98,30 @@ export default function Settings() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Deployment mode */}
+        <div className="card">
+          <p className="section-title mb-4">Deployment Mode</p>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            {[
+              ['No-Cloud Mode', deployment?.noCloudMode ? 'Enabled' : 'Available'],
+              ['Offline Training', deployment?.trainingMode || 'local-first'],
+              ['Offline Inference', deployment?.inferenceMode || 'local-first'],
+              ['Docker Support', deployment?.dockerSupport ? 'Ready' : 'Missing build files'],
+              ['Kubernetes Support', deployment?.kubernetesSupport ? 'Ready' : 'Missing manifests'],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <p className="input-label">{label}</p>
+                <p className="font-mono text-sm text-text-primary">{value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs font-mono text-text-muted">
+            {deployment?.offlineMode
+              ? 'The system is configured to operate in offline / no-cloud mode.'
+              : 'Offline mode is available and can be enabled through the deployment environment.'}
+          </p>
         </div>
 
         {/* User management (admin only) */}

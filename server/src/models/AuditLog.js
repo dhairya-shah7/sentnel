@@ -16,6 +16,7 @@ const auditLogSchema = new mongoose.Schema(
     resource: { type: String }, // e.g. 'dataset', 'anomaly', 'user'
     resourceId: { type: String },
     ipAddress: { type: String },
+    origin: { type: String },
     userAgent: { type: String },
     method: { type: String },
     path: { type: String },

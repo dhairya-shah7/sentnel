@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Datasets from './pages/Datasets';
 import Analysis from './pages/Analysis';
 import Anomalies from './pages/Anomalies';
+import Threats from './pages/Threats';
 import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
 
@@ -21,7 +22,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
 
 function AppShell({ children }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <AlertBanner />
@@ -79,6 +80,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AppShell><Anomalies /></AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/threats"
+          element={
+            <ProtectedRoute>
+              <AppShell><Threats /></AppShell>
             </ProtectedRoute>
           }
         />

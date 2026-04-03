@@ -1,10 +1,16 @@
 import { useDropzone } from 'react-dropzone';
 
-export default function UploadDropzone({ onFile, maxSizeMB = 100, loading = false }) {
+export default function UploadDropzone({ onFile, maxSizeMB = null, loading = false }) {
+  const maxSize = Number.isFinite(maxSizeMB) && maxSizeMB > 0 ? maxSizeMB * 1024 * 1024 : undefined;
   const { getRootProps, getInputProps, isDragActive, acceptedFiles, fileRejections } = useDropzone({
-    accept: { 'text/csv': ['.csv'], 'text/plain': ['.csv'], 'application/octet-stream': ['.csv'] },
+    accept: {
+      'text/csv': ['.csv'],
+      'text/plain': ['.csv'],
+      'application/vnd.ms-excel': ['.csv'],
+      'application/octet-stream': ['.csv'],
+    },
     maxFiles: 1,
-    maxSize: maxSizeMB * 1024 * 1024,
+    ...(maxSize ? { maxSize } : {}),
     onDropAccepted: ([file]) => onFile?.(file),
   });
 
@@ -32,7 +38,9 @@ export default function UploadDropzone({ onFile, maxSizeMB = 100, loading = fals
               <p className="text-sm text-text-secondary">
                 Drag & drop a <span className="text-accent font-mono">.csv</span> file, or click to browse
               </p>
-              <p className="text-xs font-mono text-text-muted">Max size: {maxSizeMB}MB</p>
+              <p className="text-xs font-mono text-text-muted">
+                {maxSizeMB ? `Max size: ${maxSizeMB}MB` : 'Server-configured size limit'}
+              </p>
             </>
           )}
         </div>
@@ -50,7 +58,7 @@ export default function UploadDropzone({ onFile, maxSizeMB = 100, loading = fals
         <div className="mt-2 px-3 py-2 bg-alert-dim border border-alert/20">
           <p className="text-xs font-mono text-alert">
             {rejection.errors[0]?.code === 'file-too-large'
-              ? `File too large (max ${maxSizeMB}MB)`
+              ? `File too large${maxSizeMB ? ` (max ${maxSizeMB}MB)` : ''}`
               : rejection.errors[0]?.message || 'Invalid file'}
           </p>
         </div>

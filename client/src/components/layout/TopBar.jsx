@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,13 +9,21 @@ export default function TopBar({ title }) {
   const navigate = useNavigate();
   const [showAlerts, setShowAlerts] = useState(false);
   const [showUser, setShowUser] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <header className="h-14 bg-surface border-b border-border flex items-center px-5 gap-4 shrink-0">
       {/* Page title */}
       <div className="flex-1 min-w-0">
-        <h1 className="text-sm font-mono font-medium text-text-secondary uppercase tracking-widest truncate">
-          {title || 'SentinelOps'}
+        <h1 className="text-sm font-display font-semibold text-text-secondary uppercase tracking-widest truncate">
+          {title || 'Regiment'}
         </h1>
       </div>
 
@@ -30,7 +38,16 @@ export default function TopBar({ title }) {
 
       {/* Timestamp */}
       <span className="hidden lg:block text-xs font-mono text-text-muted">
-        {new Date().toISOString().slice(0, 19).replace('T', ' ')} UTC
+        {now.toLocaleString('en-GB', {
+          hour12: false,
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })}
       </span>
 
       {/* Alert bell */}
@@ -49,7 +66,7 @@ export default function TopBar({ title }) {
         </button>
 
         {showAlerts && (
-          <div className="absolute right-0 top-10 w-80 bg-[#0A0F1A] border border-border z-50 shadow-2xl">
+          <div className="absolute right-0 top-10 w-80 bg-surface border border-border z-50 shadow-2xl">
             <div className="px-3 py-2 border-b border-border flex items-center justify-between">
               <span className="text-xs font-mono text-text-secondary uppercase tracking-wider">Alerts</span>
               <button onClick={() => setShowAlerts(false)} className="text-text-muted hover:text-text-secondary text-xs">✕</button>
@@ -89,7 +106,7 @@ export default function TopBar({ title }) {
         </button>
 
         {showUser && (
-          <div className="absolute right-0 top-10 w-44 bg-[#0A0F1A] border border-border z-50 shadow-2xl">
+          <div className="absolute right-0 top-10 w-44 bg-surface border border-border z-50 shadow-2xl">
             <div className="px-3 py-2 border-b border-border">
               <p className="text-xs text-text-primary font-medium">{user?.username}</p>
               <p className="text-xs font-mono text-accent uppercase">{user?.role}</p>

@@ -8,8 +8,8 @@ export default function ConfirmModal({ open, title, message, onConfirm, onCancel
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="card corner-accent w-full max-w-md animate-fade-in">
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-shell w-full max-w-md animate-fade-in p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           {dangerous && <span className="text-alert text-lg">⚠</span>}
           <h3 className="text-sm font-display font-semibold text-text-primary uppercase tracking-wider">

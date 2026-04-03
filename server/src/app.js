@@ -14,9 +14,11 @@ const analysisRoutes = require('./routes/analysis');
 const anomalyRoutes = require('./routes/anomalies');
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');
+const systemRoutes = require('./routes/system');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+app.disable('x-powered-by');
 
 const getAllowedOrigins = () => {
   const explicitOrigins = [
@@ -41,10 +43,29 @@ const isAllowedOrigin = (origin) => {
   if (!origin) return true;
 
   if (process.env.NODE_ENV !== 'production') {
-    return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    return isLocalOrLanOrigin(origin);
   }
 
   return getAllowedOrigins().has(origin);
+};
+
+const isLocalOrLanOrigin = (origin) => {
+  try {
+    const url = new URL(origin);
+    if (!['http:', 'https:'].includes(url.protocol)) return false;
+
+    const host = url.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
+
+    // Allow private LAN ranges in development so the app works from another device on the network.
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+
+    return false;
+  } catch {
+    return false;
+  }
 };
 
 // ─── Security headers ───────────────────────────────────────
@@ -80,7 +101,8 @@ app.use(
 // ─── Rate limiting ──────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: Number(process.env.API_RATE_LIMIT_MAX || (process.env.NODE_ENV === 'production' ? 300 : 1000)),
+  skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' },
@@ -116,10 +138,11 @@ app.use('/api/analysis', analysisRoutes);
 app.use('/api/anomalies', anomalyRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/system', systemRoutes);
 
 // ─── Health check ───────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'sentinelops-api', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'regiment-api', timestamp: new Date().toISOString() });
 });
 
 // 404 handler

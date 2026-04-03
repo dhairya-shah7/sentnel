@@ -1,0 +1,55 @@
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  ml_service:
+    build:
+      context: ./ml_service
+    environment:
+      ML_PORT: 8000
+      ML_MONGO_URI: mongodb://mongo:27017/sentinelops
+      MODEL_SAVE_PATH: /app/data/saved_models
+      JOB_STORE_PATH: /app/data/job_store.json
+      OFFLINE_MODE: "true"
+    volumes:
+      - ml_data:/app/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+
+  server:
+    build:
+      context: ./server
+    environment:
+      PORT: 4000
+      MONGO_URI: mongodb://mongo:27017/sentinelops
+      ML_SERVICE_URL: http://ml_service:8000
+      UPLOAD_DIR: /app/uploads
+      OFFLINE_MODE: "true"
+      NO_CLOUD_MODE: "true"
+      CLIENT_URLS: http://localhost:5173,http://127.0.0.1:5173,http://localhost,http://127.0.0.1
+    volumes:
+      - server_uploads:/app/uploads
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mongo
+      - ml_service
+
+  client:
+    build:
+      context: ./client
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+
+volumes:
+  mongo_data:
+  ml_data:
+  server_uploads:

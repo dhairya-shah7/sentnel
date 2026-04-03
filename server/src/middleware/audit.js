@@ -24,6 +24,7 @@ const audit = (action) => {
           resource: req.params?.id ? req.baseUrl.split('/').pop() : undefined,
           resourceId: req.params?.id,
           ipAddress: req.ip || req.connection?.remoteAddress,
+          origin: req.headers.origin,
           userAgent: req.headers['user-agent'],
           method: req.method,
           path: req.originalUrl,

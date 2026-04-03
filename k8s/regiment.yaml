@@ -1,0 +1,150 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: regiment
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: regiment
+spec:
+  selector:
+    app: mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: regiment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-service
+  namespace: regiment
+spec:
+  selector:
+    app: ml-service
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-service
+  namespace: regiment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-service
+  template:
+    metadata:
+      labels:
+        app: ml-service
+    spec:
+      containers:
+        - name: ml-service
+          image: regiment/ml-service:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: ML_MONGO_URI
+              value: mongodb://mongo:27017/sentinelops
+            - name: OFFLINE_MODE
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server
+  namespace: regiment
+spec:
+  selector:
+    app: server
+  ports:
+    - port: 4000
+      targetPort: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server
+  namespace: regiment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: server
+  template:
+    metadata:
+      labels:
+        app: server
+    spec:
+      containers:
+        - name: server
+          image: regiment/server:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: MONGO_URI
+              value: mongodb://mongo:27017/sentinelops
+            - name: ML_SERVICE_URL
+              value: http://ml-service:8000
+            - name: OFFLINE_MODE
+              value: "true"
+            - name: NO_CLOUD_MODE
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client
+  namespace: regiment
+spec:
+  selector:
+    app: client
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: regiment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: regiment/client:latest
+          ports:
+            - containerPort: 80

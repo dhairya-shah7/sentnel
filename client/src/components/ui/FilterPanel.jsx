@@ -9,12 +9,12 @@ export default function FilterPanel({ filters, setFilter, resetFilters, datasets
       </div>
 
       <div>
-        <label className="input-label">Risk Level</label>
+        <label className="input-label">Threat View</label>
         <select className="select" value={filters.risk} onChange={(e) => setFilter('risk', e.target.value)}>
-          <option value="">All</option>
-          <option value="critical">Critical</option>
+          <option value="">All Records</option>
+          <option value="anomaly">Anomalies</option>
           <option value="suspicious">Suspicious</option>
-          <option value="normal">Normal</option>
+          <option value="critical">Critical Threats</option>
         </select>
       </div>
 
@@ -39,6 +39,7 @@ export default function FilterPanel({ filters, setFilter, resetFilters, datasets
           <option value="">All</option>
           <option value="new">New</option>
           <option value="reviewed">Reviewed</option>
+          <option value="suspicious">Suspicious</option>
           <option value="confirmed">Confirmed</option>
           <option value="false_positive">False Positive</option>
           <option value="escalated">Escalated</option>
@@ -58,11 +59,11 @@ export default function FilterPanel({ filters, setFilter, resetFilters, datasets
       )}
 
       <div>
-        <label className="input-label">From</label>
+        <label className="input-label">From Event Time</label>
         <input type="date" className="input" value={filters.from} onChange={(e) => setFilter('from', e.target.value)} />
       </div>
       <div>
-        <label className="input-label">To</label>
+        <label className="input-label">To Event Time</label>
         <input type="date" className="input" value={filters.to} onChange={(e) => setFilter('to', e.target.value)} />
       </div>
     </div>

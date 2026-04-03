@@ -16,6 +16,13 @@ const trafficRecordSchema = new mongoose.Schema(
     flags: { type: String, default: '' },
     byteRate: { type: Number, default: 0 },
     connectionState: { type: String, default: 'unknown' },
+    eventTimestamp: { type: Date, index: true },
+    severity: {
+      type: String,
+      enum: ['normal', 'anomaly', 'critical'],
+      default: 'normal',
+      index: true,
+    },
     label: {
       type: String,
       enum: ['normal', 'anomaly', 'unknown'],
@@ -29,6 +36,7 @@ const trafficRecordSchema = new mongoose.Schema(
 );
 
 trafficRecordSchema.index({ datasetId: 1, label: 1 });
+trafficRecordSchema.index({ datasetId: 1, severity: 1 });
 trafficRecordSchema.set('toJSON', { versionKey: false });
 
 module.exports = mongoose.model('TrafficRecord', trafficRecordSchema);

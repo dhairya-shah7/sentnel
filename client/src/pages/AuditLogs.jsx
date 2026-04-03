@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import PageWrapper from '../components/layout/PageWrapper';
 import DataTable from '../components/ui/DataTable';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
@@ -22,6 +23,25 @@ export default function AuditLogs() {
     finally { setLoading(false); }
   }, [page, filters]);
 
+  const exportLogs = async () => {
+    try {
+      const params = { ...filters };
+      Object.keys(params).forEach((k) => !params[k] && delete params[k]);
+      const res = await api.get('/audit/logs/export', { params, responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'audit_trail.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Audit trail exported');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to export audit logs');
+    }
+  };
+
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const columns = [
@@ -29,6 +49,7 @@ export default function AuditLogs() {
     { key: 'userId', label: 'User', render: (_, row) => <span className="font-mono text-accent">{row.username || row.userId?.username || '—'}</span> },
     { key: 'action', label: 'Action', render: (v) => <span className="font-mono text-xs uppercase text-text-primary">{v}</span> },
     { key: 'resource', label: 'Resource' },
+    { key: 'path', label: 'Path' },
     { key: 'method', label: 'Method', render: (v) => (
       <span className={`font-mono text-xs ${v==='DELETE' ? 'text-alert' : v==='POST' ? 'text-accent' : 'text-text-muted'}`}>{v}</span>
     )},
@@ -36,6 +57,8 @@ export default function AuditLogs() {
       <span className={`font-mono text-xs ${v >= 400 ? 'text-alert' : 'text-success'}`}>{v}</span>
     )},
     { key: 'ipAddress', label: 'IP', render: (v) => <span className="font-mono text-xs text-text-muted">{v}</span> },
+    { key: 'origin', label: 'Origin', render: (v) => <span className="font-mono text-xs text-text-muted">{v || '—'}</span> },
+    { key: 'userAgent', label: 'User Agent', render: (v) => <span className="font-mono text-xs text-text-muted truncate max-w-56 block">{v || '—'}</span> },
   ];
 
   return (
@@ -67,8 +90,9 @@ export default function AuditLogs() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <p className="section-title">{total.toLocaleString()} Audit Events</p>
+          <button onClick={exportLogs} className="btn btn-ghost btn-sm">Export CSV</button>
         </div>
 
         <DataTable columns={columns} data={logs} loading={loading} emptyMessage="No audit logs found" />

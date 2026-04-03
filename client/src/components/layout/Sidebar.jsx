@@ -7,6 +7,7 @@ const NAV = [
   { to: '/datasets',  label: 'Datasets',    icon: '⊟', roles: ['admin','analyst','viewer'] },
   { to: '/analysis',  label: 'Analysis',    icon: '⊕', roles: ['admin','analyst'] },
   { to: '/anomalies', label: 'Anomalies',   icon: '⚠', roles: ['admin','analyst','viewer'] },
+  { to: '/threats',   label: 'Threats',     icon: 'T', roles: ['admin','analyst','viewer'] },
   { to: '/audit',     label: 'Audit Logs',  icon: '▣', roles: ['admin'] },
   { to: '/settings',  label: 'Settings',    icon: '⊞', roles: ['admin'] },
 ];
@@ -27,7 +28,7 @@ export default function Sidebar() {
         <span className="text-accent text-lg font-mono font-bold shrink-0">⬡</span>
         {!sidebarCollapsed && (
           <div className="min-w-0">
-            <div className="text-text-primary font-display font-bold text-sm tracking-widest uppercase">Sentinel</div>
+            <div className="text-text-primary font-display font-bold text-sm tracking-widest uppercase">Regiment</div>
             <div className="text-accent font-mono text-xs tracking-widest">OPS</div>
           </div>
         )}

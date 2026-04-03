@@ -27,6 +27,12 @@ const anomalyResultSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    threatType: {
+      type: String,
+      enum: ['jamming', 'spoofing', 'intrusion_attempt', 'suspicious_activity', 'unknown'],
+      default: 'unknown',
+      index: true,
+    },
     confidence: {
       type: Number,
       min: 0,
@@ -42,6 +48,15 @@ const anomalyResultSchema = new mongoose.Schema(
     duration: { type: Number },
     byteRate: { type: Number },
     flags: { type: String },
+    explanation: { type: mongoose.Schema.Types.Mixed },
+    eventTimestamp: {
+      type: Date,
+      index: true,
+    },
+    rowIndex: {
+      type: Number,
+      index: true,
+    },
     // Analyst
     flaggedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -50,7 +65,7 @@ const anomalyResultSchema = new mongoose.Schema(
     analystNote: { type: String, maxlength: 1000 },
     status: {
       type: String,
-      enum: ['new', 'reviewed', 'confirmed', 'false_positive', 'escalated'],
+      enum: ['new', 'reviewed', 'suspicious', 'confirmed', 'false_positive', 'escalated'],
       default: 'new',
       index: true,
     },
@@ -66,6 +81,7 @@ const anomalyResultSchema = new mongoose.Schema(
 
 anomalyResultSchema.index({ riskScore: -1 });
 anomalyResultSchema.index({ detectedAt: -1 });
+anomalyResultSchema.index({ eventTimestamp: -1 });
 anomalyResultSchema.set('toJSON', { versionKey: false });
 
 module.exports = mongoose.model('AnomalyResult', anomalyResultSchema);

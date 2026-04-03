@@ -10,6 +10,8 @@
     "preview": "vite preview --configLoader native"
   },
   "dependencies": {
+    "@fontsource/bricolage-grotesque": "^5.2.10",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "autoprefixer": "^10.4.27",
     "axios": "^1.14.0",
     "date-fns": "^4.1.0",

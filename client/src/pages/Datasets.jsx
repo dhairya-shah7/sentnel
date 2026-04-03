@@ -7,7 +7,13 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 
-const SOURCE_OPTIONS = ['UNSW-NB15', 'NSL-KDD', 'CICIDS'];
+const SOURCE_OPTIONS = ['Custom', 'UNSW-NB15', 'NSL-KDD', 'CICIDS'];
+const TEMPLATE_OPTIONS = [
+  { value: 'Custom', label: 'Custom' },
+  { value: 'UNSW-NB15', label: 'UNSW-NB15' },
+  { value: 'NSL-KDD', label: 'NSL-KDD' },
+  { value: 'CICIDS', label: 'CICIDS' },
+];
 
 const STATUS_BADGE = {
   ready:      'bg-success-dim text-success border-success/20',
@@ -20,8 +26,10 @@ export default function Datasets() {
   const [datasets, setDatasets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [autoAnalyze, setAutoAnalyze] = useState(true);
   const [file, setFile] = useState(null);
-  const [source, setSource] = useState('UNSW-NB15');
+  const [source, setSource] = useState('Custom');
+  const [template, setTemplate] = useState('Custom');
   const [name, setName] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -35,24 +43,62 @@ export default function Datasets() {
 
   useEffect(() => { fetchDatasets(); }, []);
 
+  useEffect(() => {
+    const normalized = String(source || '').trim().toLowerCase();
+    const matched = TEMPLATE_OPTIONS.find((option) => option.value.toLowerCase() === normalized);
+    setTemplate(matched?.value || 'Custom');
+  }, [source]);
+
   const handleUpload = async () => {
     if (!file) return toast.error('Select a CSV file first');
+    const uploadName = name || file.name;
+    const previousCount = datasets.length;
     const form = new FormData();
     form.append('file', file);
     form.append('source', source);
-    form.append('name', name || file.name);
+    form.append('name', uploadName);
     setUploading(true);
     try {
-      await api.post('/dataset/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const uploadRes = await api.post('/dataset/upload', form);
       toast.success('Dataset uploaded successfully');
       setFile(null);
       setName('');
       fetchDatasets();
+      if (autoAnalyze && uploadRes.data?.dataset?._id) {
+        try {
+          await api.post(`/analysis/run/${uploadRes.data.dataset._id}`, {
+            modelType: 'isolation_forest',
+            contamination: 0.1,
+          });
+          toast.success('Analysis started automatically');
+        } catch (analysisErr) {
+          toast.error(analysisErr.response?.data?.error || 'Upload saved, but analysis could not be started automatically');
+        }
+      }
     } catch (err) {
+      const recovered = await tryRecoverSuccessfulUpload(uploadName, source, previousCount);
+      if (recovered) {
+        toast.success('Dataset uploaded successfully');
+        setFile(null);
+        setName('');
+        return;
+      }
+
+      if (err.response?.status === 401) {
+        toast.error('Your session expired while uploading. Please sign in again, then retry.');
+        return;
+      }
+
       toast.error(err.response?.data?.error || 'Upload failed');
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleTemplateChange = (value) => {
+    setTemplate(value);
+    if (value === 'Custom') return;
+    setSource(value);
   };
 
   const handleDelete = async () => {
@@ -86,17 +132,53 @@ export default function Datasets() {
           <p className="section-title mb-4">Upload New Dataset</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="input-label">Dataset Source</label>
-              <select className="select" value={source} onChange={(e) => setSource(e.target.value)}>
-                {SOURCE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
+              <label className="input-label">Dataset Template</label>
+              <select
+                className="select"
+                value={template}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+              >
+                {TEMPLATE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
+              <p className="mt-1 text-[11px] font-mono text-text-muted">
+                Choose a dataset type template to prefill the source label.
+              </p>
+            </div>
+            <div>
+              <label className="input-label">Dataset Source</label>
+              <input
+                className="input"
+                list="dataset-sources"
+                placeholder="e.g. Custom, UNSW-NB15, NSL-KDD, CICIDS"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+              />
+              <datalist id="dataset-sources">
+                {SOURCE_OPTIONS.map((s) => <option key={s} value={s} />)}
+              </datalist>
+              <p className="mt-1 text-[11px] font-mono text-text-muted">
+                You can still type any source name after selecting a template.
+              </p>
             </div>
             <div>
               <label className="input-label">Display Name (optional)</label>
               <input className="input" placeholder="e.g. UNSW Training Set 2024" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
           </div>
-          <UploadDropzone onFile={setFile} loading={uploading} />
+          <label className="flex items-center gap-2 text-xs font-mono text-text-secondary mb-3">
+            <input
+              type="checkbox"
+              checked={autoAnalyze}
+              onChange={(e) => setAutoAnalyze(e.target.checked)}
+              className="accent-accent"
+            />
+            Run analysis automatically after upload
+          </label>
+          <UploadDropzone onFile={setFile} loading={uploading} maxSizeMB={null} />
           <div className="flex justify-end mt-4">
             <button onClick={handleUpload} disabled={!file || uploading} className="btn btn-primary">
               {uploading ? '⟳ Uploading...' : '↑ Upload Dataset'}
@@ -128,4 +210,25 @@ export default function Datasets() {
       />
     </PageWrapper>
   );
+
+  async function tryRecoverSuccessfulUpload(expectedName, expectedSource, previousCountSnapshot) {
+    try {
+      const res = await api.get('/dataset?limit=100');
+      const latestDatasets = res.data.datasets || [];
+      setDatasets(latestDatasets);
+
+      if (latestDatasets.length <= previousCountSnapshot) return false;
+
+      const normalizedName = String(expectedName || '').trim().toLowerCase();
+      const normalizedSource = String(expectedSource || '').trim().toLowerCase();
+
+      return latestDatasets.some((dataset) => {
+        const datasetName = String(dataset.name || '').trim().toLowerCase();
+        const datasetSource = String(dataset.source || '').trim().toLowerCase();
+        return datasetName === normalizedName && datasetSource === normalizedSource;
+      });
+    } catch {
+      return false;
+    }
+  }
 }

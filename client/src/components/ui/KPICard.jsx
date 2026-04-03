@@ -12,7 +12,7 @@ export default function KPICard({ label, value, delta, unit, color = 'accent', i
     <div className="card corner-accent relative overflow-hidden">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="section-title">{label}</p>
+          <p className="section-title font-display">{label}</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-display font-bold ${cls.split(' ')[0]}`}>
               {value ?? '—'}

@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+const API_ORIGIN = resolveApiOrigin();
+
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api',
+  baseURL: `${API_ORIGIN}/api`,
   withCredentials: true, // send cookies (refresh token)
   timeout: 30000,
 });
@@ -49,7 +51,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const res = await axios.post('http://localhost:4000/api/auth/refresh', {}, { withCredentials: true });
+        const res = await axios.post(`${API_ORIGIN}/api/auth/refresh`, {}, { withCredentials: true });
         const newToken = res.data.accessToken;
         useAuthStore.getState().setToken(newToken);
         api.defaults.headers.Authorization = `Bearer ${newToken}`;
@@ -77,3 +79,26 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+function resolveApiOrigin() {
+  const configured = String(import.meta.env.VITE_API_BASE_URL || '').trim();
+  const currentOrigin = `${window.location.protocol}//${window.location.hostname}:4000`;
+
+  if (!configured) return currentOrigin;
+
+  try {
+    const configuredUrl = new URL(configured);
+    const currentHost = window.location.hostname;
+    const configuredHost = configuredUrl.hostname;
+    const isLoopback = (host) => ['localhost', '127.0.0.1', '::1'].includes(host);
+
+    // If the app is being served from a LAN IP, prefer the current host so cookies and CORS stay aligned.
+    if (isLoopback(configuredHost) && !isLoopback(currentHost)) {
+      return currentOrigin;
+    }
+
+    return configured.replace(/\/$/, '');
+  } catch {
+    return currentOrigin;
+  }
+}
