@@ -24,6 +24,7 @@ const getAllowedOrigins = () => {
   const explicitOrigins = [
     process.env.CLIENT_URL,
     process.env.CLIENT_URLS,
+    process.env.FRONTEND_URL,
   ]
     .filter(Boolean)
     .flatMap((value) => value.split(','))
