@@ -1,10 +1,11 @@
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 import { authService } from './auth';
+import { getApiOrigin } from './runtime';
 
 let socket = null;
 let reconnectingAfterAuthError = false;
-const SOCKET_ORIGIN = resolveSocketOrigin();
+const SOCKET_ORIGIN = getApiOrigin();
 
 export const connectSocket = () => {
   const token = useAuthStore.getState().accessToken;
@@ -71,25 +72,3 @@ export const onEvent = (event, handler) => {
 export const offEvent = (event, handler) => {
   if (socket) socket.off(event, handler);
 };
-
-function resolveSocketOrigin() {
-  const configured = String(import.meta.env.VITE_API_BASE_URL || '').trim();
-  const currentOrigin = `${window.location.protocol}//${window.location.hostname}:4000`;
-
-  if (!configured) return currentOrigin;
-
-  try {
-    const configuredUrl = new URL(configured);
-    const currentHost = window.location.hostname;
-    const configuredHost = configuredUrl.hostname;
-    const isLoopback = (host) => ['localhost', '127.0.0.1', '::1'].includes(host);
-
-    if (isLoopback(configuredHost) && !isLoopback(currentHost)) {
-      return currentOrigin;
-    }
-
-    return configured.replace(/\/$/, '');
-  } catch {
-    return currentOrigin;
-  }
-}

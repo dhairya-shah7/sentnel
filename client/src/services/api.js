@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { getApiOrigin } from './runtime';
 
-const API_ORIGIN = resolveApiOrigin();
+export const API_ORIGIN = getApiOrigin();
 
 const api = axios.create({
   baseURL: `${API_ORIGIN}/api`,
@@ -79,26 +80,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
-function resolveApiOrigin() {
-  const configured = String(import.meta.env.VITE_API_BASE_URL || '').trim();
-  const currentOrigin = `${window.location.protocol}//${window.location.hostname}:4000`;
-
-  if (!configured) return currentOrigin;
-
-  try {
-    const configuredUrl = new URL(configured);
-    const currentHost = window.location.hostname;
-    const configuredHost = configuredUrl.hostname;
-    const isLoopback = (host) => ['localhost', '127.0.0.1', '::1'].includes(host);
-
-    // If the app is being served from a LAN IP, prefer the current host so cookies and CORS stay aligned.
-    if (isLoopback(configuredHost) && !isLoopback(currentHost)) {
-      return currentOrigin;
-    }
-
-    return configured.replace(/\/$/, '');
-  } catch {
-    return currentOrigin;
-  }
-}

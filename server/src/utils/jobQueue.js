@@ -25,6 +25,7 @@ const cleanOldJobs = (maxAgeMs = 24 * 60 * 60 * 1000) => {
 };
 
 // Clean old jobs every hour
-setInterval(cleanOldJobs, 60 * 60 * 1000);
+const cleanupTimer = setInterval(cleanOldJobs, 60 * 60 * 1000);
+cleanupTimer.unref?.();
 
 module.exports = { jobQueue, updateJob, getJob, getAllJobs };

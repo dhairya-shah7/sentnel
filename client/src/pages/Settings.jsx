@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { useAuth } from '../hooks/useAuth';
 import { useNotificationStore, requestNotificationPermission } from '../services/notifications';
-import api from '../services/api';
+import api, { API_ORIGIN } from '../services/api';
+import { getMlServiceOrigin } from '../services/runtime';
 import toast from 'react-hot-toast';
 
 export default function Settings() {
@@ -10,6 +11,7 @@ export default function Settings() {
   const [users, setUsers] = useState([]);
   const [updating, setUpdating] = useState(null);
   const [deployment, setDeployment] = useState(null);
+  const mlServiceOrigin = getMlServiceOrigin();
   const { enabled, soundEnabled, criticalOnly, alertThreshold, setEnabled, setSoundEnabled, setCriticalOnly, setAlertThreshold } = useNotificationStore();
 
   const [notificationPermission, setNotificationPermission] = useState('default');
@@ -163,14 +165,18 @@ export default function Settings() {
           <p className="section-title mb-4">Service Endpoints</p>
           <div className="space-y-2 text-xs font-mono">
             {[
-              ['Frontend', 'http://localhost:5173'],
-              ['API Server', 'http://localhost:4000/api'],
-              ['ML Service', 'http://localhost:8000'],
-              ['ML Docs', 'http://localhost:8000/docs'],
+              ['Frontend', window.location.origin],
+              ['API Server', `${API_ORIGIN}/api`],
+              ['ML Service', mlServiceOrigin || 'Not configured'],
+              ['ML Docs', mlServiceOrigin ? `${mlServiceOrigin}/docs` : 'Not configured'],
             ].map(([k, v]) => (
               <div key={k} className="flex items-center gap-3 py-1.5 border-b border-border">
                 <span className="text-text-muted w-28">{k}</span>
-                <a href={v} target="_blank" rel="noreferrer" className="text-accent hover:underline">{v}</a>
+                {v === 'Not configured' ? (
+                  <span className="text-text-muted">{v}</span>
+                ) : (
+                  <a href={v} target="_blank" rel="noreferrer" className="text-accent hover:underline">{v}</a>
+                )}
               </div>
             ))}
           </div>

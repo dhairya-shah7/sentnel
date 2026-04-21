@@ -7,6 +7,21 @@ const SALT_ROUNDS = 12;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME_MS = 15 * 60 * 1000;
 
+function getRefreshCookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const sameSite = (process.env.COOKIE_SAME_SITE || '').trim().toLowerCase() || (isProduction ? 'none' : 'lax');
+  const secure = String(process.env.COOKIE_SECURE || '').trim().toLowerCase() === 'true'
+    || (isProduction && sameSite === 'none');
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+}
+
 const generateTokens = (user) => {
   const payload = { id: user._id, role: user.role, email: user.email };
 
@@ -22,12 +37,7 @@ const generateTokens = (user) => {
 };
 
 const setRefreshCookie = (res, token) => {
-  res.cookie('refreshToken', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  res.cookie('refreshToken', token, getRefreshCookieOptions());
 };
 
 // POST /api/auth/register
@@ -121,7 +131,7 @@ exports.logout = async (req, res, next) => {
     if (req.user) {
       await User.findByIdAndUpdate(req.user._id, { refreshToken: null });
     }
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', getRefreshCookieOptions());
     res.json({ message: 'Logged out successfully' });
   } catch (err) {
     next(err);

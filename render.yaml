@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: sentinelops-web
+    env: node
+    rootDir: .
+    buildCommand: |
+      cd client
+      npm ci
+      npm run build
+      cd ../server
+      npm ci
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ML_SERVICE_URL
+        sync: false
+      - key: CLIENT_URLS
+        sync: false
+  - type: web
+    name: sentinelops-ml
+    env: python
+    rootDir: ml_service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 10001
+      - key: CLIENT_URLS
+        sync: false

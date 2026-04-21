@@ -19,6 +19,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 const getAllowedOrigins = () => {
   const explicitOrigins = [
@@ -140,6 +141,25 @@ app.use('/api/anomalies', anomalyRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/system', systemRoutes);
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+const clientIndexPath = path.join(clientDistPath, 'index.html');
+
+if (fs.existsSync(clientIndexPath)) {
+  app.use(
+    express.static(clientDistPath, {
+      maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+      index: false,
+    })
+  );
+
+  app.get(/^(?!\/api(?:\/|$)|\/health(?:\/|$)).*/, (req, res, next) => {
+    if (req.method !== 'GET' || !req.accepts('html')) {
+      return next();
+    }
+
+    return res.sendFile(clientIndexPath);
+  });
+}
 
 // ─── Health check ───────────────────────────────────────────
 app.get('/health', (req, res) => {

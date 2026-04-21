@@ -1,8 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import './index.css';
+
+// Register the service worker so the app can be installed as a PWA.
+registerSW({ immediate: true });
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />

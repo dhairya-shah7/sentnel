@@ -38,6 +38,8 @@ build/
 .next/
 .vite/
 .vercel/
+release/
+out/
 
 # OS Files
 .DS_Store

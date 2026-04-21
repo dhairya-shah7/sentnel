@@ -28,7 +28,7 @@ mongoose
       process.exit(1);
     });
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`[Server] Regiment API running on http://localhost:${PORT}`);
       console.log(`[Server] Environment: ${process.env.NODE_ENV || 'development'}`);
     });

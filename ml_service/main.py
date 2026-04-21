@@ -79,9 +79,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+def _split_origins(value: str):
+    return [item.strip() for item in str(value or "").split(",") if item.strip()]
+
+
+def get_allowed_origins():
+    origins = {
+        "http://localhost:4000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:4000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    }
+
+    for env_name in ("CLIENT_URL", "CLIENT_URLS", "FRONTEND_URL", "CORS_ORIGINS"):
+        origins.update(_split_origins(os.getenv(env_name, "")))
+
+    return sorted(origins)
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4000", "http://localhost:5173"],
+    allow_origins=get_allowed_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
 )

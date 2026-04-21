@@ -100,6 +100,46 @@ npm run dev
 
 App available at `http://localhost:5173`.
 
+## Deploying On Render / Railway
+
+For production, deploy the backend and frontend as separate services and set these environment variables:
+
+Backend:
+- `PORT`
+- `MONGO_URI`
+- `JWT_SECRET`
+- `JWT_REFRESH_SECRET`
+- `CLIENT_URL` or `CLIENT_URLS`
+- `ML_SERVICE_URL` if you run the ML service separately
+- `COOKIE_SAME_SITE=none`
+- `COOKIE_SECURE=true`
+
+Frontend:
+- `VITE_API_BASE_URL` pointing to the backend origin, for example `https://your-backend.onrender.com`
+- `VITE_ML_SERVICE_URL` if you expose the ML service separately
+
+If you deploy the frontend behind a proxy or custom domain, the app will use that origin automatically when `VITE_API_BASE_URL` is not set. For a separate frontend/backend deployment, always set `VITE_API_BASE_URL` explicitly.
+
+## Desktop Installer
+
+The repo now includes an Electron packaging path for a local desktop app installer.
+
+Build the installer on Windows:
+```bash
+npm install
+npm run desktop:dist
+```
+
+The installer output is written to `release/`.
+
+The desktop shell loads the built frontend from `client/dist/` and reads backend URLs from:
+- `SENTINELOPS_API_BASE_URL`
+- `SENTINELOPS_ML_SERVICE_URL`
+
+If those are not set, it defaults to local service ports so you can point the app at a backend running on the same machine.
+
+The installer packages the desktop shell, not MongoDB or the Python ML runtime. For full analysis and dataset flows on a local device, run the backend and ML service on that same machine or point the installer at a hosted backend.
+
 ## Default Admin Account
 
 Create an account via the Register page on first run. The first registered user automatically gets the `admin` role.
